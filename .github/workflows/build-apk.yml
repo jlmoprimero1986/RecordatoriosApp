@@ -1,0 +1,50 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-android-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # Acelera builds posteriores
+      - name: Cache Buildozer/Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildozer
+            ~/.gradle
+          key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            buildozer-${{ runner.os }}-
+
+      # Buildozer action instala todo lo necesario (SDK, NDK, Java, etc.)
+      - name: Build debug APK
+        uses: ArtemSBulgakov/buildozer-action@v1
+        with:
+          command: buildozer -v android debug
+        env:
+          BUILDOZER_WARN_ON_ROOT: "0"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: recordatorios-apk
+          path: bin/*.apk
